@@ -1,0 +1,7 @@
+**/data
+**/cvat_data
+**/.git
+**/scripts
+**.ipynb_checkpoints
+**.DS_Store
+**.swp
