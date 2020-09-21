@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+import argparse
+import subprocess
+import os
+import sys
+
+prefix = '/opt/ml/'
+input_path = os.path.join(prefix,'input/data')
+output_path = os.path.join(prefix, 'output/data')
+model_path = os.path.join(prefix, 'model')
+config_path = os.path.join(prefix, 'input/config')
+
+weights_path = os.path.join(input_path, 'model')
+cfg_path = os.path.join(config_path, 'yolov3-tiny.cfg')
+data_path = os.path.join(config_path, 'obj.data')
+
+
+channel_name = 'training'
+training_path = os.path.join(input_path, channel_name)
+
+training_script = 'yolov3/train.py')
+default_params = ['--cfg',str(cfg_path),'--data',str(data_path),'--weights',weights_path]
+
+def _run(cmd):
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
+    stdout, stderr = process.communicate()
+
+    return_code = process.poll()
+    if return_code:
+        error_msg = 'Return code: {}, CMD: {} Err: {}'.format(return_code, cmd, stderr)
+        raise Exception(error_msg)
+
+
+if __name__=='__main__':
+    
+    train_cmd = [sys.executable, training_script] + default_params
+
+    _run(train_cmd)
+
+    print('LOL')
