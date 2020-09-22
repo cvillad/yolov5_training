@@ -3,35 +3,33 @@ import argparse
 import subprocess
 import os
 import sys
-import torch
+import json
 from yolov5.utils.logger import get_logger, info_level, debug_level
 
 logger = get_logger(debug_level)
 
 prefix = '/opt/ml/'
-input_path = os.path.join(prefix,'input/data')
+input_path = os.path.join(prefix, 'input/data')
 output_path = os.path.join(prefix, 'output/data')
 model_path = os.path.join(prefix, 'model')
-config_path = os.path.join(prefix, 'input/config')
 checkpoint_path = os.path.join(prefix, 'checkpoints')
 hyp_path = os.path.join(input_path,'training/hyp.scratch.yaml')
-
-weights_path = os.path.join(input_path, 'model')
-#weights_path = ''
-cfg_path = os.path.join(prefix, 'code/yolov5/models/yolov5s.yaml')
+input_model_path = os.path.join(input_path, 'model/yolov5s.pt')
 data_path = os.path.join(input_path, 'training/data.yaml')
 
+cfg_path = os.path.join(prefix, 'code/yolov5/models/yolov5s.yaml')
 
-training_channel = 'training'
-training_path = os.path.join(input_path, training_channel)
-
-validating_channel = 'validating'
-validating_path = os.path.join(input_path, validating_channel)
+param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
 training_script = 'code/yolov5/train.py'
-default_params = ['--cfg',str(cfg_path),'--data',str(data_path),'--weights',str(weights_path), '--model',str(model_path),'--checkpoints',str(checkpoint_path),'--adam','--epochs',str(5), '--hyp',str(hyp_path),'--batch_size',32]
 
-def _run(cmd):
+default_params = ['--cfg',str(cfg_path),
+                '--data',str(data_path),
+                '--weights',str(''),
+                '--model',str(model_path),'--checkpoints',str(checkpoint_path), 
+                '--hyp',str(hyp_path)]
+
+def _run(cmd): 
     logger.info('Running training script')
     process = subprocess.Popen(cmd, env=os.environ)
     stdout, stderr = process.communicate()
@@ -41,6 +39,18 @@ def _run(cmd):
         error_msg = 'Return code: {}  Err: {}'.format(return_code, stderr)
         raise Exception(error_msg)
 
+def _hyperparameters_to_cmd_args(hyperparameters):
+    """
+    Converts our hyperparameters, in json format, into key-value pair suitable for passing to our training
+    algorithm.
+    """
+    cmd_args_list = []
+
+    for key, value in hyperparameters.items():
+        cmd_args_list.append('--{}'.format(key))
+        cmd_args_list.append(value)
+
+    return cmd_args_list
 
 def show_dirs():
     logger.info('Container structure')
@@ -53,11 +63,15 @@ def show_dirs():
 
 if __name__=='__main__':
     show_dirs()
-
-    train_cmd = [sys.executable, '-m', 'torch.distributed.launch', '--nproc_per_node', '2', training_script] + default_params
-    #train_cmd = [sys.executable, training_script] + default_params
-    _run(train_cmd)
+    
+    with open(param_path, 'r') as tc:
+            training_params = json.load(tc)
+    cmd_args = _hyperparameters_to_cmd_args(training_params)
+    
+    #train_cmd = [sys.executable, '-m', 'torch.distributed.launch', '--nproc_per_node', '2', training_script] + default_params
     #train_cmd = [sys.executable, '-m', 'torch.distributed.launch', '--nproc_per_node', '2', training_script]
-    #_run(train_cmd)
+    train_cmd = [sys.executable, training_script] + default_params + cmd_args
+    _run(train_cmd)
+    
     
     logger.info('Training completed')
