@@ -235,7 +235,7 @@ def train(hyp, opt, device, tb_writer=None):
         mloss = torch.zeros(4, device=device)  # mean losses
         if rank != -1:
             dataloader.sampler.set_epoch(epoch)
-        logger.info(('\n' + '%10s' * 8) % ('Epoch', 'gpu_mem', 'GIoU', 'obj', 'cls', 'total', 'targets', 'img_size'))
+        #logger.info(('\n' + '%10s' * 8) % ('Epoch', 'gpu_mem', 'GIoU', 'obj', 'cls', 'total', 'targets', 'img_size'))
         optimizer.zero_grad()
         for i, (imgs, targets, paths, _) in enumerate(dataloader):  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -283,7 +283,7 @@ def train(hyp, opt, device, tb_writer=None):
                 mloss = (mloss * i + loss_items) / (i + 1)  # update mean losses
                 mem = '%.3gG' % (torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0)  # (GB)
                 s = ('%10s' * 2 + '%10.4g' * 6) % ('%g/%g' % (epoch, epochs - 1), mem, *mloss, targets.shape[0], imgs.shape[-1])
-                logger.info(s)
+                #logger.info(s)
 
                 # Plot
                 if ni < 3:
@@ -314,7 +314,9 @@ def train(hyp, opt, device, tb_writer=None):
                                                  model=ema.ema,
                                                  single_cls=opt.single_cls,
                                                  dataloader=testloader,
-                                                 save_dir=log_dir)
+                                                 save_dir=log_dir,
+                                                 tb_writer=tb_writer,
+                                                 epoch=epoch)
 
             # Write
             with open(results_file, 'a') as f:
@@ -352,7 +354,9 @@ def train(hyp, opt, device, tb_writer=None):
                 if best_fitness == fi:
                     torch.save(ckpt, best)
                 del ckpt
+        
         # end epoch ----------------------------------------------------------------------------------------------------
+        logger.info("Epoch {} completed".format(epoch))
     # end training
 
     if rank in [-1, 0]:

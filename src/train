@@ -16,14 +16,11 @@ checkpoint_path = os.path.join(prefix, 'checkpoints')
 hyp_path = os.path.join(input_path,'training/hyp.scratch.yaml')
 data_path = os.path.join(input_path, 'training/data.yaml')
 
-cfg_path = os.path.join(prefix, 'code/yolov5/models/yolov5s.yaml')
-
 param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
 training_script = 'code/yolov5/train.py'
 
-default_params = ['--cfg',str(cfg_path),
-                '--data',str(data_path),
+default_params = ['--data',str(data_path),
                 '--model',str(model_path),
                 '--checkpoints',str(checkpoint_path), 
                 '--hyp',str(hyp_path)]
@@ -61,7 +58,7 @@ def show_dirs():
                 logger.debug(os.path.join(root, file))
 
 if __name__=='__main__':
-    show_dirs()
+    #show_dirs()
     
     with open(param_path, 'r') as tc:
             training_params = json.load(tc)

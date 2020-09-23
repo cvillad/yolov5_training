@@ -34,7 +34,9 @@ def test(data,
          dataloader=None,
          save_dir='',
          merge=False,
-         save_txt=False):
+         save_txt=False,
+         tb_writer=None,
+         epoch=None):
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -186,13 +188,21 @@ def test(data,
 
             # Append statistics (correct, conf, pcls, tcls)
             stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
-            logger.info("{}/{}".format(batch_i,len(dataloader)))
+        
+        logger.info("Batch {}/{} completed".format(batch_i,len(dataloader)))
         # Plot images
         if batch_i < 1:
-            f = Path(save_dir) / ('test_batch%g_gt.jpg' % batch_i)  # filename
-            plot_images(img, targets, paths, str(f), names)  # ground truth
-            f = Path(save_dir) / ('test_batch%g_pred.jpg' % batch_i)
-            plot_images(img, output_to_target(output, width, height), paths, str(f), names)  # predictions
+            f = str(save_dir / ('test_batch%g_gt.jpg' % batch_i))
+            result = plot_images(img, targets, paths, f, names)  # ground truth
+            if tb_writer and result is not None:
+                tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
+
+            f = str(save_dir / ('test_batch%g_pred.jpg' % batch_i))
+            result = plot_images(img, output_to_target(output, width, height), paths, f, names)  # predictions
+            if tb_writer and result is not None:
+                tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
+   
+            
 
     # Compute statistics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
