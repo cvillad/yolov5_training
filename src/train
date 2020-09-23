@@ -14,7 +14,6 @@ output_path = os.path.join(prefix, 'output/data')
 model_path = os.path.join(prefix, 'model')
 checkpoint_path = os.path.join(prefix, 'checkpoints')
 hyp_path = os.path.join(input_path,'training/hyp.scratch.yaml')
-input_model_path = os.path.join(input_path, 'model/yolov5s.pt')
 data_path = os.path.join(input_path, 'training/data.yaml')
 
 cfg_path = os.path.join(prefix, 'code/yolov5/models/yolov5s.yaml')
@@ -25,7 +24,6 @@ training_script = 'code/yolov5/train.py'
 
 default_params = ['--cfg',str(cfg_path),
                 '--data',str(data_path),
-                '--weights',str(''),
                 '--model',str(model_path),
                 '--checkpoints',str(checkpoint_path), 
                 '--hyp',str(hyp_path)]

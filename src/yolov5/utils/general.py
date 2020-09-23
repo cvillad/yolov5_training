@@ -25,6 +25,9 @@ from tqdm import tqdm
 from utils.google_utils import gsutil_getsize
 from utils.torch_utils import init_seeds as init_torch_seeds
 from utils.torch_utils import is_parallel
+from utils.logger import get_logger, info_level, debug_level
+
+logger = get_logger(debug_level)
 
 # Set printoptions
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
@@ -832,8 +835,8 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
     # Evolve
     npr = np.random
     f, sh, mp, s = fitness(k), k.shape, 0.9, 0.1  # fitness, generations, mutation prob, sigma
-    pbar = tqdm(range(gen), desc='Evolving anchors with Genetic Algorithm')  # progress bar
-    for _ in pbar:
+    logger.info('Evolving anchors with Genetic Algorithm')
+    for _ in range(gen):
         v = np.ones(sh)
         while (v == 1).all():  # mutate until a change occurs (prevent duplicates)
             v = ((npr.random(sh) < mp) * npr.random() * npr.randn(*sh) * s + 1).clip(0.3, 3.0)
@@ -841,7 +844,7 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
         fg = fitness(kg)
         if fg > f:
             f, k = fg, kg.copy()
-            pbar.desc = 'Evolving anchors with Genetic Algorithm: fitness = %.4f' % f
+            logger.info('Evolving anchors with Genetic Algorithm: fitness = %.4f' % f)
             if verbose:
                 print_results(k)
 

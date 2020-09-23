@@ -16,7 +16,9 @@ from utils.general import (
     coco80_to_coco91_class, check_dataset, check_file, check_img_size, compute_loss, non_max_suppression, scale_coords,
     xyxy2xywh, clip_coords, plot_images, xywh2xyxy, box_iou, output_to_target, ap_per_class, set_logging)
 from utils.torch_utils import select_device, time_synchronized
+from utils.logger import get_logger, info_level, debug_level
 
+logger = get_logger(debug_level)
 
 def test(data,
          weights=None,
@@ -89,7 +91,7 @@ def test(data,
     p, r, f1, mp, mr, map50, map, t0, t1, mf1 = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
     loss = torch.zeros(3, device=device)
     jdict, stats, ap, ap_class = [], [], [], []
-    for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
+    for batch_i, (img, targets, paths, shapes) in enumerate(dataloader):
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -184,7 +186,7 @@ def test(data,
 
             # Append statistics (correct, conf, pcls, tcls)
             stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
-
+            logger.info("{}/{}".format(batch_i,len(dataloader)))
         # Plot images
         if batch_i < 1:
             f = Path(save_dir) / ('test_batch%g_gt.jpg' % batch_i)  # filename
