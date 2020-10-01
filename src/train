@@ -4,7 +4,7 @@ import subprocess
 import os
 import sys
 import json
-from yolov5.utils.logger import get_logger, info_level, debug_level
+from utils.logger import get_logger, info_level, debug_level
 
 logger = get_logger(debug_level)
 
@@ -18,7 +18,7 @@ data_path = os.path.join(input_path, 'training/data.yaml')
 
 param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
 
-training_script = 'code/yolov5/train.py'
+training_script = 'code/yolo.py'
 
 default_params = ['--data',str(data_path),
                 '--model',str(model_path),
@@ -58,7 +58,7 @@ def show_dirs():
                 logger.debug(os.path.join(root, file))
 
 if __name__=='__main__':
-    #show_dirs()
+    show_dirs()
     
     with open(param_path, 'r') as tc:
             training_params = json.load(tc)
