@@ -1,7 +1,8 @@
 **/data
-**/cvat_data
+src/detect.py
 **/.git
 **/scripts
 **.ipynb_checkpoints
 **.DS_Store
 **.swp
+**/weights

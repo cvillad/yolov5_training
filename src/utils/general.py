@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from copy import copy
 from pathlib import Path
 
+from PIL import Image
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
@@ -25,9 +26,6 @@ from tqdm import tqdm
 from utils.google_utils import gsutil_getsize
 from utils.torch_utils import init_seeds as init_torch_seeds
 from utils.torch_utils import is_parallel
-from utils.logger import get_logger, info_level, debug_level
-
-logger = get_logger(debug_level)
 
 # Set printoptions
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
@@ -835,8 +833,8 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
     # Evolve
     npr = np.random
     f, sh, mp, s = fitness(k), k.shape, 0.9, 0.1  # fitness, generations, mutation prob, sigma
-    logger.info('Evolving anchors with Genetic Algorithm')
-    for _ in range(gen):
+    pbar = tqdm(range(gen), desc='Evolving anchors with Genetic Algorithm')  # progress bar
+    for _ in pbar:
         v = np.ones(sh)
         while (v == 1).all():  # mutate until a change occurs (prevent duplicates)
             v = ((npr.random(sh) < mp) * npr.random() * npr.randn(*sh) * s + 1).clip(0.3, 3.0)
@@ -844,7 +842,7 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
         fg = fitness(kg)
         if fg > f:
             f, k = fg, kg.copy()
-            logger.info('Evolving anchors with Genetic Algorithm: fitness = %.4f' % f)
+            pbar.desc = 'Evolving anchors with Genetic Algorithm: fitness = %.4f' % f
             if verbose:
                 print_results(k)
 
@@ -888,33 +886,37 @@ def apply_classifier(x, model, img, im0):
     for i, d in enumerate(x):  # per image
         if d is not None and len(d):
             d = d.clone()
-
             # Reshape and pad cutouts
             b = xyxy2xywh(d[:, :4])  # boxes
-            b[:, 2:] = b[:, 2:].max(1)[0].unsqueeze(1)  # rectangle to square
-            b[:, 2:] = b[:, 2:] * 1.3 + 30  # pad
             d[:, :4] = xywh2xyxy(b).long()
 
             # Rescale boxes from img_size to im0 size
             scale_coords(img.shape[2:], d[:, :4], im0[i].shape)
 
             # Classes
-            pred_cls1 = d[:, 5].long()
-            ims = []
+            top_indexes = []
+            top_probabilities = []
+            best_probabilities = []
+            best_indexes = []
             for j, a in enumerate(d):  # per item
-                cutout = im0[i][int(a[1]):int(a[3]), int(a[0]):int(a[2])]
-                im = cv2.resize(cutout, (224, 224))  # BGR
-                # cv2.imwrite('test%i.jpg' % j, cutout)
+                im = im0[i][int(a[1]):int(a[3]), int(a[0]):int(a[2])]
+                #cv2.imwrite('test%i.jpg' % j, cutout)
 
-                im = im[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-                im = np.ascontiguousarray(im, dtype=np.float32)  # uint8 to float32
-                im /= 255.0  # 0 - 255 to 0.0 - 1.0
-                ims.append(im)
+                im = im[:, :, ::-1]  # BGR to RGB, to 3x416x416
+                class_pred, pred_idx, outputs = model.predict(im)  # classifier prediction
+                best_indexes.append(pred_idx)
+                best_probabilities.append(outputs[pred_idx])
+                
+                probabilities,indexes = outputs.topk(3)
+                top_probabilities.append(probabilities.tolist())
+                top_indexes.append(indexes.tolist())
 
-            pred_cls2 = model(torch.Tensor(ims).to(d.device)).argmax(1)  # classifier prediction
-            x[i] = x[i][pred_cls1 == pred_cls2]  # retain matching class detections
+            best_indexes = torch.tensor(best_indexes)    
+            best_probabilities = torch.tensor(best_probabilities)    
+            x[i][:,5] = best_indexes
+            x[i][:,4] = best_probabilities
 
-    return x
+    return x, np.array(top_indexes), np.array(top_probabilities)
 
 
 def fitness(x):
