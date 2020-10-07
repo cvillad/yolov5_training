@@ -40,28 +40,9 @@ def detect(save_img=False):
         model.half()  # to FP16
 
     # Second-stage classifier
-    classify = True
+    classify = opt.classify
     if classify:
-        #modelc = cnn_learner(data, resnet34, metrics=[error_rate,accuracy])
-        modelc = load_learner(opt.classifier)
-        
-        #modelc = load_classifier(name='resnet34', n=20)  # initialize
-        #modelc.load_state_dict(torch.load('weights/stage-2.pth', map_location=device)['model'])  # load weights
-        #modelc.to(device).eval()
-
-    # Set Dataloader
-    vid_path, vid_writer = None, None
-    if webcam:
-        view_img = True
-        cudnn.benchmark = True  # set True to speed up constant image size inference
-        dataset = LoadStreams(source, img_size=imgsz)
-    else:
-        save_img = True
-        dataset = LoadImages(source, img_size=imgsz)
-
-    # Get names and colors
-    #names = model.module.names if hasattr(model, 'module') else model.names
-    names = ['aguacate',
+        names = ['aguacate',
             'arroz_basmati_castellanox1000g',
             'arroz_blanco_carullax1000g',
             'arroz_vitamor_dianax500g',
@@ -81,6 +62,23 @@ def detect(save_img=False):
             'yogurt_alpina_finesse_fresax180g',
             'yogurt_alpina_finesse_frutos_rojosx180g',
             'yogurt_alpina_finesse_melocotonx180g']
+        modelc = load_learner(opt.classifier)
+    else:
+        names = model.module.names if hasattr(model, 'module') else model.names
+
+    # Set Dataloader
+    vid_path, vid_writer = None, None
+    if webcam:
+        view_img = True
+        cudnn.benchmark = True  # set True to speed up constant image size inference
+        dataset = LoadStreams(source, img_size=imgsz)
+    else:
+        save_img = True
+        dataset = LoadImages(source, img_size=imgsz)
+
+    # Get names and colors
+    
+    
 
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]
 
@@ -105,9 +103,10 @@ def detect(save_img=False):
         # Apply Classifier
         if classify:
             pred, top_idx, top_probabilities = apply_classifier(pred, modelc, img, im0s)
-        top_names = np.array(names)[top_idx]
-        ranking = [{'probabilities': {class_name: prob for class_name, prob in zip(names, probs)}} for names, probs in zip(top_names, top_probabilities)]
-        print(json.dumps(ranking, indent=3))
+            top_names = np.array(names)[top_idx]
+            ranking = [{'probabilities': {class_name: prob for class_name, prob in zip(names, probs)}} for names, probs in zip(top_names, top_probabilities)]
+            print(json.dumps(ranking, indent=3))
+        
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
                 p, s, im0 = path[i], '%g: ' % i, im0s[i].copy()
@@ -188,7 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--update', action='store_true', help='update all models')
-    parser.add_argument('--classifier', type=str, default='weights/fastai_model.pkl', help='second stage classifier')
+    parser.add_argument('--classify', action='store_true', help='if you want to apply a second stage classifier')
+    parser.add_argument('--classifier', type=str, default='weights/fastai_model.pkl', help='second stage classifier path')
     opt = parser.parse_args()
     print(opt)
 
