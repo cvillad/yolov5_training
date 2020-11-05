@@ -17,8 +17,10 @@ from utils.general import (
     xyxy2xywh, plot_one_box, strip_optimizer, set_logging)
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 
+import matplotlib.pyplot as plt
 
-from fastai2.vision.all import *
+
+from fastai.vision import *
 
 def detect(save_img=False):
     out, source, weights, view_img, save_txt, imgsz = \
@@ -40,29 +42,12 @@ def detect(save_img=False):
         model.half()  # to FP16
 
     # Second-stage classifier
-    classify = opt.classify
-    if classify:
-        names = ['aguacate',
-            'arroz_basmati_castellanox1000g',
-            'arroz_blanco_carullax1000g',
-            'arroz_vitamor_dianax500g',
-            'chicharron_americano_jacksx15g',
-            'coca_cola_originalx250ml',
-            'coca_cola_originalx400ml',
-            'mango_tommy',
-            'maracuya',
-            'pan_de_queso_la_frontera',
-            'pan_mantequilla_la_fronterax55g',
-            'papas_limon_margarita_packeconomicox300g',
-            'papas_limon_margaritax105g',
-            'papas_limon_margaritax110g',
-            'papas_limon_margaritax39g',
-            'spagheti_barilla',
-            'yogurt_alpina_finesse_fresax150g',
-            'yogurt_alpina_finesse_fresax180g',
-            'yogurt_alpina_finesse_frutos_rojosx180g',
-            'yogurt_alpina_finesse_melocotonx180g']
-        modelc = load_learner(opt.classifier)
+    classifier = opt.classifier
+    if classifier:
+        classifier_path = os.path.join(*classifier.split("/")[0:-1])
+        modelc = load_learner(classifier_path,opt.classifier.split("/")[-1])
+        names = modelc.data.classes
+        #modelc = load_learner(opt.classifier)
     else:
         names = model.module.names if hasattr(model, 'module') else model.names
 
@@ -99,14 +84,19 @@ def detect(save_img=False):
 
         # Apply NMS
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
-        t2 = time_synchronized()
-        # Apply Classifier
-        if classify:
-            pred, top_idx, top_probabilities = apply_classifier(pred, modelc, img, im0s)
-            top_names = np.array(names)[top_idx]
-            ranking = [{'probabilities': {class_name: prob for class_name, prob in zip(names, probs)}} for names, probs in zip(top_names, top_probabilities)]
-            print(json.dumps(ranking, indent=3))
         
+        # Apply Classifier
+        if classifier:
+            pred, top_idx, top_probabilities = apply_classifier(pred, modelc, img, im0s)
+            try:
+                top_names = np.array(names)[top_idx]
+                ranking = [{'probabilities': {class_name: prob for class_name, prob in zip(names, probs)}} for names, probs in zip(top_names, top_probabilities)]
+                print(json.dumps(ranking, indent=3))
+            except:
+                print("")
+            
+        
+        t2 = time_synchronized()
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
                 p, s, im0 = path[i], '%g: ' % i, im0s[i].copy()
@@ -175,8 +165,8 @@ def detect(save_img=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
-    parser.add_argument('--output', type=str, default='inference/output', help='output folder')  # output folder
+    parser.add_argument('--source', type=str, default='../data/inference/images', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--output', type=str, default='../data/inference/output', help='output folder')  # output folder
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.4, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
@@ -187,8 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--update', action='store_true', help='update all models')
-    parser.add_argument('--classify', action='store_true', help='if you want to apply a second stage classifier')
-    parser.add_argument('--classifier', type=str, default='weights/fastai_model.pkl', help='second stage classifier path')
+    parser.add_argument('--classifier', type=str, help='second stage classifier path')
     opt = parser.parse_args()
     print(opt)
 

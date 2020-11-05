@@ -22,6 +22,7 @@ import yaml
 from scipy.cluster.vq import kmeans
 from scipy.signal import butter, filtfilt
 from tqdm import tqdm
+from fastai.vision import image, pil2tensor
 
 from utils.google_utils import gsutil_getsize
 from utils.torch_utils import init_seeds as init_torch_seeds
@@ -882,6 +883,8 @@ def print_mutation(hyp, results, yaml_file='hyp_evolved.yaml', bucket=''):
 
 def apply_classifier(x, model, img, im0):
     # applies a second stage classifier to yolo outputs
+    top_indexes = []
+    top_probabilities = []
     im0 = [im0] if isinstance(im0, np.ndarray) else im0
     for i, d in enumerate(x):  # per image
         if d is not None and len(d):
@@ -900,13 +903,15 @@ def apply_classifier(x, model, img, im0):
             best_indexes = []
             for j, a in enumerate(d):  # per item
                 im = im0[i][int(a[1]):int(a[3]), int(a[0]):int(a[2])]
-                #cv2.imwrite('test%i.jpg' % j, cutout)
+                #cv2.imwrite('test%i.jpg' % j, im)
+                im = im[:, :, ::-1]  # RGB to BGR, to 3x416x416
+                im = pil2tensor(im, np.float32)
+                im = image.Image(im.div_(255))
+                im = im.resize(224)
+                pred_cls, pred_idx, outputs = model.predict(im)
 
-                im = im[:, :, ::-1]  # BGR to RGB, to 3x416x416
-                class_pred, pred_idx, outputs = model.predict(im)  # classifier prediction
                 best_indexes.append(pred_idx)
                 best_probabilities.append(outputs[pred_idx])
-                
                 probabilities,indexes = outputs.topk(3)
                 top_probabilities.append(probabilities.tolist())
                 top_indexes.append(indexes.tolist())

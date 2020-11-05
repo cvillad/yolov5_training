@@ -3,7 +3,7 @@ train: /opt/ml/input/data/training/training/  # 128 images
 val: /opt/ml/input/data/training/validating/  # 128 images
 
 # number of classes
-nc: 20
+nc: 21
 
 # class names
 names: ['aguacate',
@@ -25,5 +25,6 @@ names: ['aguacate',
         'yogurt_alpina_finesse_fresax150g',
         'yogurt_alpina_finesse_fresax180g',
         'yogurt_alpina_finesse_frutos_rojosx180g',
-        'yogurt_alpina_finesse_melocotonx180g']
+        'yogurt_alpina_finesse_melocotonx180g',
+	'pan_de_queso_largo_frontera']
 

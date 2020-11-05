@@ -1,8 +1,12 @@
 **.txt
+*.DS_Store
+*.tar.gz
 **/backup
 **.pt
 **.pkl
+**/output
 **.git
+**/notebooks/*.jpg
 **.cache
 # Byte-compiled / optimized / DLL files
 __pycache__/
